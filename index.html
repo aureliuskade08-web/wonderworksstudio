@@ -87,6 +87,22 @@ p{margin:0}
 .scrollcue span{display:block;width:1.5px;height:44px;background:linear-gradient(var(--red),transparent);animation:drip 2s infinite}
 @keyframes drip{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
 #top{position:relative}
+.herovid{position:relative;margin:32px 0 0;width:100%;max-width:640px;aspect-ratio:16/9;border-radius:18px;overflow:hidden;background:#000;border:1px solid var(--red-65);box-shadow:0 20px 80px var(--red-45),0 0 0 1px rgba(255,255,255,.04)}
+.herovid video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.vplay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:0;color:#fff;cursor:pointer;font:inherit;
+  background:linear-gradient(180deg,rgba(0,0,0,.15),rgba(0,0,0,.6));transition:opacity .35s}
+.vplay .ring{width:76px;height:76px;border-radius:50%;background:var(--red);display:grid;place-items:center;margin-bottom:8px;box-shadow:0 0 0 0 var(--red-65);animation:ping 1.8s infinite;transition:transform .2s}
+.vplay:hover .ring{transform:scale(1.08)}
+.vplay .ring svg{width:30px;height:30px;margin-left:4px}
+.vplay b{font-family:var(--display);font-weight:400;text-transform:uppercase;letter-spacing:.05em;font-size:1rem}
+.vplay small{color:var(--muted);font-size:.85rem}
+.herovid.playing .vplay{opacity:0;pointer-events:none}
+@media(max-width:999px){#top{flex-direction:column;align-items:stretch;justify-content:center}.herovid{max-width:none}}
+@media(min-width:1000px){
+  #top{justify-content:space-between;gap:40px}
+  #top .col{flex:0 1 560px}
+  .herovid{margin:0;flex:0 1 min(46vw,640px);align-self:center}
+}
 
 /* ---------- marquee ---------- */
 .ticker{position:relative;z-index:2;border-block:1px solid var(--line);background:rgba(0,0,0,.78);backdrop-filter:blur(6px);overflow:hidden;white-space:nowrap}
@@ -263,6 +279,10 @@ html.locked,html.locked body{overflow:hidden}
         <a class="btn ghost" href="#voice">Hear the voiceover side</a>
       </div>
     </div>
+    <figure class="herovid" id="heroVid">
+      <video id="promo" src="video/wonderworks-promo.mp4" poster="video/wonderworks-promo-poster.jpg" preload="metadata" playsinline aria-label="Wonderworks Studio intro video"></video>
+      <button class="vplay" id="promoBtn" type="button" aria-label="Play intro video with sound"><span class="ring"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="#fff"/></svg></span><b>Watch the intro</b><small>38 sec · sound on</small></button>
+    </figure>
     <div class="scrollcue" aria-hidden="true"><span></span>Scroll to spin the deck</div>
   </section>
 
@@ -404,7 +424,7 @@ const touch = matchMedia('(hover: none)').matches;
 document.documentElement.classList.add('js');
 
 /* ---------- shared live state ---------- */
-const live = { y: 0, prog: 0, vel: 0, level: 0, mx: 0, my: 0, beat: false, reel: false };
+const live = { y: 0, prog: 0, vel: 0, level: 0, mx: 0, my: 0, beat: false, reel: false, vid: false };
 
 /* ---------- ticker ---------- */
 (() => {
@@ -573,7 +593,7 @@ function applyMix() {
   if (!actx) return;
   const t = actx.currentTime;
   if (live.y > 30) everScrolled = true;
-  const duck = live.reel ? .25 : 1;
+  const duck = live.vid ? 0 : live.reel ? .25 : 1;
   master.gain.setTargetAtTime(live.beat ? .8 * duck : 0, t, live.beat ? .7 : .15);
   drumG.gain.setTargetAtTime(everScrolled ? 1 : 0, t, .6);
   bassG.gain.setTargetAtTime(everScrolled ? .9 : 0, t, .8);
@@ -597,6 +617,15 @@ gateBtn.addEventListener('click', () => {
 }, { once: true });
 beatBtn.addEventListener('click', () => setMusic(!live.beat));
 gateBtn.focus({ preventScroll: true });
+
+const promo = $('#promo'), promoBtn = $('#promoBtn'), heroVid = $('#heroVid');
+promoBtn.addEventListener('click', () => {
+  if (typeof reel !== 'undefined' && !reel.paused) reel.pause();
+  promo.currentTime = 0; promo.controls = true;
+  promo.play().catch(() => { promo.controls = true; });
+});
+promo.addEventListener('play', () => { live.vid = true; heroVid.classList.add('playing'); applyMix(); });
+['pause', 'ended'].forEach(ev => promo.addEventListener(ev, () => { live.vid = false; if (ev === 'ended') { promo.controls = false; heroVid.classList.remove('playing'); } applyMix(); }));
 
 const reel = $('#reel'), reelBtn = $('#reelBtn'), reelNote = $('#reelNote'), playIcon = $('#playIcon');
 const PLAY = 'M7 4.5v15l13-7.5z', PAUSE = 'M6 4h4v16H6zM14 4h4v16h-4z';
