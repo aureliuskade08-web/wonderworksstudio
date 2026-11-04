@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="locked">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -203,35 +203,8 @@ footer.site{padding:44px var(--pad) 120px;border-top:1px solid var(--line);backg
 .social a:hover{border-color:var(--red);background:var(--red-15)}
 .fine{color:var(--muted);font-size:.88rem;width:100%}
 
-/* ---------- beat button ---------- */
-.beat{position:fixed;left:var(--pad);bottom:22px;z-index:45;display:inline-flex;align-items:center;gap:12px;min-height:48px;padding:0 20px 0 16px;border-radius:999px;
-  border:1.5px solid var(--red-65);background:rgba(0,0,0,.8);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff;font:600 .95rem var(--body);cursor:pointer;transition:background .2s,border-color .2s}
-.beat:hover{border-color:var(--red)}
-.beat[aria-pressed="true"]{background:var(--red);border-color:var(--red)}
-.eq{display:inline-flex;align-items:flex-end;gap:3px;height:18px}
-.eq i{width:3px;height:30%;background:currentColor;border-radius:2px}
-.beat[aria-pressed="true"] .eq i{animation:eq .6s ease-in-out infinite alternate}
-.beat[aria-pressed="true"] .eq i:nth-child(2){animation-delay:.15s}
-.beat[aria-pressed="true"] .eq i:nth-child(3){animation-delay:.3s}
-.beat[aria-pressed="true"] .eq i:nth-child(4){animation-delay:.08s}
-@keyframes eq{to{height:100%}}
-.beat .eq i{color:var(--red)}
-.beat[aria-pressed="true"] .eq i{background:#fff}
 .scrollcue{display:none}
 @media(min-width:900px){.scrollcue{display:flex;left:auto;right:var(--pad)}}
-
-/* ---------- entry gate ---------- */
-html.locked,html.locked body{overflow:hidden}
-.gate{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:radial-gradient(55% 45% at 50% 50%,rgba(223,37,49,.24),#000 72%),#000;transition:opacity .9s ease,visibility .9s}
-.gate.out{opacity:0;visibility:hidden}
-.gate-btn{position:relative;width:clamp(150px,22vw,210px);aspect-ratio:1;border:0;border-radius:50%;background:var(--red);color:#fff;cursor:pointer;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-family:var(--display);font-size:clamp(.9rem,1.5vw,1.15rem);letter-spacing:.06em;text-transform:uppercase;
-  box-shadow:0 0 90px var(--red-65);transition:transform .25s}
-.gate-btn:hover{transform:scale(1.06)}
-.gate-btn svg{width:34px;height:34px}
-.gate-btn::before,.gate-btn::after{content:"";position:absolute;inset:0;border-radius:50%;border:1.5px solid var(--red-65);animation:ripple 2.4s ease-out infinite;pointer-events:none}
-.gate-btn::after{animation-delay:1.2s}
-@keyframes ripple{from{transform:scale(1);opacity:.9}to{transform:scale(2.3);opacity:0}}
 
 @media(prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
@@ -240,15 +213,8 @@ html.locked,html.locked body{overflow:hidden}
 }
 @media(hover:none){.glow{display:none}}
 </style>
-<noscript><style>.gate{display:none}html.locked,html.locked body{overflow:auto}</style></noscript>
 </head>
 <body>
-<div class="gate" id="gate" role="dialog" aria-modal="true" aria-label="Start Wonderworks Studio">
-  <button class="gate-btn" id="gateBtn" type="button">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" fill="#fff"/></svg>
-    <span>Click me</span>
-  </button>
-</div>
 <div class="bar" id="bar" aria-hidden="true"></div>
 <div class="glow" id="glow" aria-hidden="true"></div>
 <canvas id="gl" aria-hidden="true"></canvas>
@@ -402,11 +368,6 @@ html.locked,html.locked body{overflow:hidden}
   <p class="fine">&copy; 2026 Wonderworks Studio. All rights reserved.</p>
 </footer>
 
-<button class="beat" id="beatBtn" aria-pressed="false">
-  <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-  <span id="beatLabel">Music off</span>
-</button>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (() => {
@@ -424,7 +385,7 @@ const touch = matchMedia('(hover: none)').matches;
 document.documentElement.classList.add('js');
 
 /* ---------- shared live state ---------- */
-const live = { y: 0, prog: 0, vel: 0, level: 0, mx: 0, my: 0, beat: false, reel: false, vid: false };
+const live = { y: 0, prog: 0, vel: 0, level: 0, mx: 0, my: 0, reel: false, vid: false };
 
 /* ---------- ticker ---------- */
 (() => {
@@ -475,157 +436,15 @@ $('#bookForm').addEventListener('submit', e => {
   location.href = `mailto:${BOOKING_EMAIL}?subject=${encodeURIComponent('Booking request: ' + d.get('type'))}&body=${encodeURIComponent(body)}`;
 });
 
-/* ---------- audio: synthesized lofi track + demo reel ---------- */
-let actx, analyser, master, musicBus, lp, drumG, bassG, keysG, noiseBuf, fdata;
-let seqTimer = null, step = 0, nextT = 0, everScrolled = false, mixTick = 0;
-const BPM = 76, SIXT = 60 / BPM / 4;
-const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
-const CHORDS = [[50, 53, 57, 60, 64], [55, 59, 62, 65, 69], [48, 52, 55, 59, 62], [57, 60, 64, 67, 71]]; /* Dm9 G13 Cmaj9 Am9 */
-const ROOTS = [38, 43, 36, 45];
-const SCALE = [74, 72, 69, 67, 65, 64, 62, 76];
-
-function impulse(sec) {
-  const n = Math.floor(actx.sampleRate * sec), b = actx.createBuffer(2, n, actx.sampleRate);
-  for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2.6); }
-  return b;
-}
-function initAudio() {
-  if (actx) return;
-  actx = new (window.AudioContext || window.webkitAudioContext)();
-  const comp = actx.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 3;
-  lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1600; lp.Q.value = .4;
-  master = actx.createGain(); master.gain.value = 0;
-  analyser = actx.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = .8;
-  musicBus = actx.createGain();
-  musicBus.connect(comp); comp.connect(lp); lp.connect(master); master.connect(analyser); analyser.connect(actx.destination);
-  fdata = new Uint8Array(analyser.frequencyBinCount);
-
-  /* reverb and tape echo */
-  const verb = actx.createConvolver(); verb.buffer = impulse(2.4);
-  const verbG = actx.createGain(); verbG.gain.value = .24; verb.connect(verbG); verbG.connect(musicBus);
-  const echo = actx.createDelay(1); echo.delayTime.value = SIXT * 3;
-  const fb = actx.createGain(); fb.gain.value = .34;
-  const elp = actx.createBiquadFilter(); elp.type = 'lowpass'; elp.frequency.value = 1400;
-  echo.connect(elp); elp.connect(fb); fb.connect(echo); elp.connect(musicBus);
-
-  /* layers: keys are always on, drums and bass join once the visitor scrolls */
-  drumG = actx.createGain(); drumG.gain.value = 0; drumG.connect(musicBus);
-  bassG = actx.createGain(); bassG.gain.value = 0; bassG.connect(musicBus);
-  keysG = actx.createGain();
-  const tape = actx.createDelay(.1); tape.delayTime.value = .012; keysG.connect(tape); tape.connect(musicBus);
-  const kv = actx.createGain(); kv.gain.value = .55; tape.connect(kv); kv.connect(verb);
-  const ke = actx.createGain(); ke.gain.value = .3; tape.connect(ke); ke.connect(echo);
-  const lfo = actx.createOscillator(), lg = actx.createGain(); lfo.frequency.value = .45; lg.gain.value = .0022; lfo.connect(lg); lg.connect(tape.delayTime); lfo.start();
-
-  /* vinyl crackle, kept outside the low-pass so it stays bright */
-  const len = actx.sampleRate * 4, cb = actx.createBuffer(1, len, actx.sampleRate), cd = cb.getChannelData(0);
-  for (let i = 0; i < len; i++) { cd[i] = (Math.random() * 2 - 1) * .012; if (Math.random() < .0007) cd[i] += (Math.random() * 2 - 1) * (.2 + Math.random() * .5); }
-  const crack = actx.createBufferSource(); crack.buffer = cb; crack.loop = true;
-  const chp = actx.createBiquadFilter(); chp.type = 'highpass'; chp.frequency.value = 900;
-  const cg = actx.createGain(); cg.gain.value = .5; crack.connect(chp); chp.connect(cg); cg.connect(master); crack.start();
-
-  noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
-  const nd = noiseBuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-}
-
-function rhodes(t, m, vel, dur) {
-  const f = mtof(m), g = actx.createGain();
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.1 * vel, t + .012); g.gain.exponentialRampToValueAtTime(.0008, t + dur);
-  const o1 = actx.createOscillator(); o1.type = 'sine'; o1.frequency.value = f; o1.connect(g);
-  const o2 = actx.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * 2.003;
-  const g2 = actx.createGain(); g2.gain.setValueAtTime(.35, t); g2.gain.exponentialRampToValueAtTime(.001, t + .35); o2.connect(g2); g2.connect(g);
-  const o3 = actx.createOscillator(); o3.type = 'triangle'; o3.frequency.value = f * .998;
-  const g3 = actx.createGain(); g3.gain.value = .3; o3.connect(g3); g3.connect(g);
-  g.connect(keysG);
-  [o1, o2, o3].forEach(o => { o.start(t); o.stop(t + dur + .05); });
-}
-function melody(t, m) {
-  const o = actx.createOscillator(), g = actx.createGain(); o.type = 'sine'; o.frequency.value = mtof(m);
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.055, t + .01); g.gain.exponentialRampToValueAtTime(.001, t + 1.1);
-  o.connect(g); g.connect(keysG); o.start(t); o.stop(t + 1.2);
-}
-function bassNote(t, m, len) {
-  const o = actx.createOscillator(), o2 = actx.createOscillator(), g = actx.createGain(), g2 = actx.createGain();
-  o.type = 'sine'; o.frequency.value = mtof(m); o2.type = 'triangle'; o2.frequency.value = mtof(m); g2.gain.value = .22;
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.5, t + .02); g.gain.setTargetAtTime(0, t + len * .55, len * .18);
-  o.connect(g); o2.connect(g2); g2.connect(g); g.connect(bassG); o.start(t); o2.start(t); o.stop(t + len + .1); o2.stop(t + len + .1);
-}
-function kick(t, v) {
-  const o = actx.createOscillator(), g = actx.createGain(); o.frequency.setValueAtTime(125, t); o.frequency.exponentialRampToValueAtTime(44, t + .13);
-  g.gain.setValueAtTime(.9 * v, t); g.gain.exponentialRampToValueAtTime(.001, t + .42); o.connect(g); g.connect(drumG); o.start(t); o.stop(t + .45);
-}
-function noiseHit(t, type, f, q, vol, dur, dest) {
-  const s = actx.createBufferSource(); s.buffer = noiseBuf; const fl = actx.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q;
-  const g = actx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
-  s.connect(fl); fl.connect(g); g.connect(dest); s.start(t, Math.random() * .5); s.stop(t + dur + .02);
-}
-function snare(t, v) {
-  noiseHit(t, 'bandpass', 1900, .8, .3 * v, .17, drumG);
-  const o = actx.createOscillator(), g = actx.createGain(); o.type = 'triangle'; o.frequency.value = 185;
-  g.gain.setValueAtTime(.14 * v, t); g.gain.exponentialRampToValueAtTime(.001, t + .1); o.connect(g); g.connect(drumG); o.start(t); o.stop(t + .12);
-}
-function hat(t, v, open) { noiseHit(t, 'highpass', 7500, .7, .07 * v, open ? .14 : .04, drumG); }
-
-function schedule() {
-  if (nextT < actx.currentTime - .2) nextT = actx.currentTime + .05; /* tab was throttled: skip ahead instead of bursting */
-  while (nextT < actx.currentTime + .3) {
-    const s = step % 16, bar = Math.floor(step / 16) % 4, t = nextT + (s % 2 ? SIXT * .22 : 0) + (Math.random() - .5) * .008;
-    if (s === 0) CHORDS[bar].forEach((m, i) => rhodes(t + i * .018, m, .95 - i * .05, 3.4));
-    if (s === 10) CHORDS[bar].slice(1).forEach((m, i) => rhodes(t + i * .015, m, .5, 1.3));
-    if ([2, 6, 9, 14].includes(s) && Math.random() < .12 + .3 * live.prog) melody(t, SCALE[(Math.random() * SCALE.length) | 0]);
-    if (s === 0) kick(t, 1);
-    if (s === 7) kick(t, .65);
-    if (s === 10 && bar % 2) kick(t, .8);
-    if (s === 4 || s === 12) snare(t, 1);
-    if (s === 15 && Math.random() < .4) snare(t, .22);
-    if (s % 2 === 0) hat(t, .55 + Math.random() * .45, false);
-    if (s === 14) hat(t, .8, true);
-    if (s === 0) bassNote(t, ROOTS[bar], SIXT * 6);
-    if (s === 7) bassNote(t, ROOTS[bar], SIXT * 2.5);
-    if (s === 10) bassNote(t, ROOTS[bar] + 12, SIXT * 3);
-    nextT += SIXT; step++;
-  }
-}
-
-const gate = $('#gate'), gateBtn = $('#gateBtn');
-const beatBtn = $('#beatBtn'), beatLabel = $('#beatLabel');
-function applyMix() {
-  if (!actx) return;
-  const t = actx.currentTime;
-  if (live.y > 30) everScrolled = true;
-  const duck = live.vid ? 0 : live.reel ? .25 : 1;
-  master.gain.setTargetAtTime(live.beat ? .8 * duck : 0, t, live.beat ? .7 : .15);
-  drumG.gain.setTargetAtTime(everScrolled ? 1 : 0, t, .6);
-  bassG.gain.setTargetAtTime(everScrolled ? .9 : 0, t, .8);
-  lp.frequency.setTargetAtTime(1500 + live.prog * 2600, t, .3);
-}
-function setMusic(on) {
-  if (on) {
-    initAudio(); actx.resume();
-    if (!seqTimer) { nextT = actx.currentTime + .1; schedule(); seqTimer = setInterval(schedule, 25); }
-    live.beat = true;
-  } else { live.beat = false; clearInterval(seqTimer); seqTimer = null; }
-  beatBtn.setAttribute('aria-pressed', live.beat);
-  beatLabel.textContent = live.beat ? 'Music on' : 'Music off';
-  applyMix();
-}
-gateBtn.addEventListener('click', () => {
-  setMusic(true);
-  gate.classList.add('out');
-  document.documentElement.classList.remove('locked');
-  setTimeout(() => { gate.hidden = true; }, 1000);
-}, { once: true });
-beatBtn.addEventListener('click', () => setMusic(!live.beat));
-gateBtn.focus({ preventScroll: true });
-
+/* ---------- hero video + demo reel ---------- */
 const promo = $('#promo'), promoBtn = $('#promoBtn'), heroVid = $('#heroVid');
 promoBtn.addEventListener('click', () => {
   if (typeof reel !== 'undefined' && !reel.paused) reel.pause();
   promo.currentTime = 0; promo.controls = true;
   promo.play().catch(() => { promo.controls = true; });
 });
-promo.addEventListener('play', () => { live.vid = true; heroVid.classList.add('playing'); applyMix(); });
-['pause', 'ended'].forEach(ev => promo.addEventListener(ev, () => { live.vid = false; if (ev === 'ended') { promo.controls = false; heroVid.classList.remove('playing'); } applyMix(); }));
+promo.addEventListener('play', () => { live.vid = true; heroVid.classList.add('playing'); });
+['pause', 'ended'].forEach(ev => promo.addEventListener(ev, () => { live.vid = false; if (ev === 'ended') { promo.controls = false; heroVid.classList.remove('playing'); } }));
 
 const reel = $('#reel'), reelBtn = $('#reelBtn'), reelNote = $('#reelNote'), playIcon = $('#playIcon');
 const PLAY = 'M7 4.5v15l13-7.5z', PAUSE = 'M6 4h4v16H6zM14 4h4v16h-4z';
@@ -639,8 +458,7 @@ reel.addEventListener('error', () => { reelNote.textContent = 'Add your demo ree
 
 function measureLevel(t) {
   let target;
-  if (live.beat && analyser) { analyser.getByteFrequencyData(fdata); let s = 0; for (let i = 0; i < 5; i++) s += fdata[i]; target = clamp(s / 5 / 255 * 1.25, 0, 1); }
-  else if (live.reel) target = .25 + .45 * Math.abs(Math.sin(t * 7.3) * Math.sin(t * 2.9 + 1));
+  if (live.reel) target = .25 + .45 * Math.abs(Math.sin(t * 7.3) * Math.sin(t * 2.9 + 1));
   else target = .12 + .08 * Math.sin(t * 2);
   live.level = lerp(live.level, target, .25);
 }
@@ -887,7 +705,6 @@ function loop(now) {
     const img = s.firstElementChild; if (img && img.tagName === 'IMG') img.style.transform = `translate3d(0,${(-off).toFixed(1)}px,0)`;
   });
 
-  if (actx && (++mixTick & 7) === 0) applyMix();
   if (wfOn) drawWave(t);
   if (gl) gl.frame(t, dt);
   requestAnimationFrame(loop);

@@ -7,7 +7,7 @@ Single-page site for Wonderworks Studio (voiceover and event DJ).
 - `audio/demo-reel.mp3` (optional): add a voiceover demo to enable the play button in the Voiceover section.
 - `fonts/Mokoto.woff2` (optional): add the licensed Mokoto font; Michroma is the fallback.
 
-The background lofi track is synthesized in the browser with the Web Audio API, so there is no audio file to host. It starts when the visitor clicks the entry button; drums and bass come in once they scroll.
+The hero plays `video/wonderworks-promo.mp4` on click, with sound. The site has no background music.
 
 Before launch: set `BOOKING_EMAIL` near the top of the script in `index.html` and replace the placeholder social links in the footer.
 
