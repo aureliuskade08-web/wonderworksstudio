@@ -90,7 +90,7 @@ p{margin:0}
 .herovid{position:relative;margin:32px 0 0;width:100%;max-width:640px;aspect-ratio:16/9;border-radius:18px;overflow:hidden;background:#000;border:1px solid var(--red-65);box-shadow:0 20px 80px var(--red-45),0 0 0 1px rgba(255,255,255,.04)}
 .herovid video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .vplay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:0;color:#fff;cursor:pointer;font:inherit;
-  background:linear-gradient(180deg,rgba(0,0,0,.15),rgba(0,0,0,.6));transition:opacity .35s}
+  background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.72));transition:opacity .35s}
 .vplay .ring{width:76px;height:76px;border-radius:50%;background:var(--red);display:grid;place-items:center;margin-bottom:8px;box-shadow:0 0 0 0 var(--red-65);animation:ping 1.8s infinite;transition:transform .2s}
 .vplay:hover .ring{transform:scale(1.08)}
 .vplay .ring svg{width:30px;height:30px;margin-left:4px}
@@ -101,7 +101,7 @@ p{margin:0}
 @media(min-width:1000px){
   #top{justify-content:space-between;gap:40px}
   #top .col{flex:0 1 560px}
-  .herovid{margin:0;flex:0 1 min(46vw,640px);align-self:center}
+  .herovid{margin:0 0 70px;flex:0 0 min(33vw,480px);align-self:flex-end}
 }
 
 /* ---------- marquee ---------- */
